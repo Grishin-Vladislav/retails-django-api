@@ -1,9 +1,8 @@
-from django.contrib.auth.models import User
 from rest_framework import generics, permissions
 
 from .permissions import IsOwnerOrReadOnly
 from .serializers import ProductSerializer, UserSerializer
-from .models import Product
+from .models import Product, CustomUser
 
 
 class ProductView(generics.ListCreateAPIView):
@@ -20,11 +19,12 @@ class ProductView(generics.ListCreateAPIView):
         serializer.save(provider=self.request.user)
 
 
-class UserList(generics.ListAPIView):
+class UserList(generics.ListCreateAPIView):
     """
     GET api/users/
+    POST api/users/
     """
-    queryset = User.objects.all()
+    queryset = CustomUser.objects.all()
     serializer_class = UserSerializer
 
 
@@ -32,5 +32,5 @@ class UserDetail(generics.RetrieveAPIView):
     """
     GET api/users/1
     """
-    queryset = User.objects.all()
+    queryset = CustomUser.objects.all()
     serializer_class = UserSerializer
