@@ -2,9 +2,23 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser
 
 
+class ProviderManager(models.Manager):
+    def get_queryset(self):
+        return super().get_queryset().filter(is_provider=True)
+
+
+class CustomerManager(models.Manager):
+    def get_queryset(self):
+        return super().get_queryset().filter(is_provider=False)
+
+
 class CustomUser(AbstractUser):
     is_provider = models.BooleanField(default=False)
     email = models.EmailField(unique=True)
+
+    objects = models.Manager()
+    providers = ProviderManager()
+    customers = CustomerManager()
 
     def __str__(self):
         return self.username
