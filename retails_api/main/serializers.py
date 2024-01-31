@@ -20,7 +20,7 @@ class UserSerializer(serializers.ModelSerializer):
     products = serializers.StringRelatedField(many=True, read_only=True)
 
     def create(self, validated_data):
-        user = USER_MODEL.objects.create_user(**validated_data)
+        user = USER_MODEL.objects.create(**validated_data)
         return user
 
     def validate_email(self, value):
