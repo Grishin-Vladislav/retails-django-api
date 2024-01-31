@@ -17,7 +17,6 @@ class ProductSerializer(serializers.ModelSerializer):
 class UserSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
     email = serializers.EmailField(write_only=True)
-    products = serializers.StringRelatedField(many=True, read_only=True)
 
     def create(self, validated_data):
         user = USER_MODEL.objects.create(**validated_data)
@@ -33,4 +32,11 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomUser
         fields = ('id', 'username', 'password',
-                  'email', 'products', 'is_provider')
+                  'email', 'is_provider')
+
+
+class UserDetailSerializer(UserSerializer):
+    products = ProductSerializer(many=True, read_only=True)
+
+    class Meta(UserSerializer.Meta):
+        fields = UserSerializer.Meta.fields + ('products',)

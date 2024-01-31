@@ -1,7 +1,8 @@
 from rest_framework import generics, permissions
 
 from .permissions import IsOwnerOrReadOnly
-from .serializers import ProductSerializer, UserSerializer
+from .serializers import ProductSerializer, UserSerializer, \
+    UserDetailSerializer
 from .models import Product, CustomUser
 
 
@@ -33,4 +34,4 @@ class UserDetail(generics.RetrieveAPIView):
     GET api/users/1
     """
     queryset = CustomUser.objects.all()
-    serializer_class = UserSerializer
+    serializer_class = UserDetailSerializer
