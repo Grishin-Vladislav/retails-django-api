@@ -6,3 +6,12 @@ class IsOwnerOrReadOnly(permissions.BasePermission):
         if request.method in permissions.SAFE_METHODS:
             return True
         return obj.provider == request.user
+
+
+class IsProviderOrReadOnly(permissions.BasePermission):
+    message = 'Only provider can add products'
+
+    def has_permission(self, request, view):
+        if request.method in permissions.SAFE_METHODS:
+            return True
+        return request.user.is_provider
