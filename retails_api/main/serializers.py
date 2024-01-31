@@ -19,7 +19,7 @@ class UserSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(write_only=True)
 
     def create(self, validated_data):
-        user = USER_MODEL.objects.create(**validated_data)
+        user = USER_MODEL.objects.create_user(**validated_data)
         return user
 
     def validate_email(self, value):
