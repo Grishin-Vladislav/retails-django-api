@@ -1,5 +1,5 @@
 from django.db import models
-from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.models import AbstractUser, UserManager
 
 
 class ProviderManager(models.Manager):
@@ -16,7 +16,7 @@ class CustomUser(AbstractUser):
     is_provider = models.BooleanField(default=False)
     email = models.EmailField(unique=True)
 
-    objects = models.Manager()
+    objects = UserManager()
     providers = ProviderManager()
     customers = CustomerManager()
 
