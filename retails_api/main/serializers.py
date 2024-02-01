@@ -7,11 +7,26 @@ USER_MODEL = get_user_model()
 
 
 class ProductSerializer(serializers.ModelSerializer):
+    name = serializers.CharField(min_length=3, max_length=255)
+    price = serializers.FloatField()
+    open_for_sale = serializers.BooleanField(default=True)
     provider = serializers.ReadOnlyField(source='provider.username')
+
+    def validate_name(self, value):
+        try:
+            Product.objects.get(name=value,
+                                provider=self.context['request'].user)
+        except Product.DoesNotExist:
+            pass
+        else:
+            raise serializers.ValidationError(
+                'Provider and product name must be unique'
+            )
+        return value
 
     class Meta:
         model = Product
-        fields = ('name', 'price', 'stock', 'provider')
+        fields = ('name', 'price', 'open_for_sale', 'provider')
 
 
 class UserSerializer(serializers.ModelSerializer):

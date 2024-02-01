@@ -8,16 +8,21 @@ from .models import Product, CustomUser
 
 class ProductView(generics.ListCreateAPIView):
     """
-    GET api/products/
-    POST api/products/ (auth required)
+    View all products or post a new one \n
+    If account is provider, view all products \n
+    If account is customer or anonymous, view only available for sale products
     """
-    queryset = Product.objects.all()
     serializer_class = ProductSerializer
     permission_classes = (permissions.IsAuthenticatedOrReadOnly,
                           IsOwnerOrReadOnly, IsProviderOrReadOnly)
 
     def perform_create(self, serializer):
         serializer.save(provider=self.request.user)
+
+    def get_queryset(self):
+        if self.request.user.is_anonymous or not self.request.user.is_provider:
+            return Product.available.all()
+        return Product.objects.all()
 
 
 class UserList(generics.ListCreateAPIView):
