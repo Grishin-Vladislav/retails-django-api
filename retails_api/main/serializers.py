@@ -6,27 +6,47 @@ from .models import Product, CustomUser
 USER_MODEL = get_user_model()
 
 
+class ListProductsSerializer(serializers.ListSerializer):
+    def validate(self, data):
+        names = [item['name'] for item in data]
+        unique_names = set()
+        duplicates = set()
+
+        for name in names:
+            if name in unique_names:
+                duplicates.add(name)
+            else:
+                unique_names.add(name)
+
+        if duplicates:
+            error_message = f"These products are duplicated in your list: " \
+                            f"{', '.join(duplicates)}"
+            raise serializers.ValidationError(
+                {"duplicated products": error_message})
+
+        return data
+
+
 class ProductSerializer(serializers.ModelSerializer):
-    name = serializers.CharField(min_length=3, max_length=255)
-    price = serializers.FloatField()
-    open_for_sale = serializers.BooleanField(default=True)
     provider = serializers.ReadOnlyField(source='provider.username')
 
     def validate_name(self, value):
         try:
-            Product.objects.get(name=value,
-                                provider=self.context['request'].user)
+            Product.objects.get(
+                name=value, provider=self.context['request'].user
+            )
         except Product.DoesNotExist:
             pass
         else:
             raise serializers.ValidationError(
-                'Provider and product name must be unique'
+                f'You already have a product with this name - {value}'
             )
         return value
 
     class Meta:
         model = Product
         fields = ('name', 'price', 'open_for_sale', 'provider')
+        list_serializer_class = ListProductsSerializer
 
 
 class UserSerializer(serializers.ModelSerializer):

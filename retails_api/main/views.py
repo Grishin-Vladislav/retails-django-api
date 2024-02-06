@@ -10,11 +10,19 @@ class ProductView(generics.ListCreateAPIView):
     """
     View all products or post a new one \n
     If account is provider, view all products \n
-    If account is customer or anonymous, view only available for sale products
+    If account is customer or anonymous, view only available for sale products \n
+    If creating a new product, you can pass either one or many products in one request
     """
     serializer_class = ProductSerializer
     permission_classes = (permissions.IsAuthenticatedOrReadOnly,
                           IsOwnerOrReadOnly, IsProviderOrReadOnly)
+
+    def get_serializer(self, *args, **kwargs):
+        serializer_class = self.get_serializer_class()
+        kwargs.setdefault('context', self.get_serializer_context())
+        if isinstance(kwargs['context']['request'].data, list):
+            kwargs['many'] = True
+        return serializer_class(*args, **kwargs)
 
     def perform_create(self, serializer):
         serializer.save(provider=self.request.user)
