@@ -1,7 +1,8 @@
+from django.db import transaction
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 
-from .models import Product, CustomUser
+from .models import Product, CustomUser, Order, OrderProduct
 
 USER_MODEL = get_user_model()
 
@@ -75,3 +76,48 @@ class UserDetailSerializer(UserSerializer):
 
     class Meta(UserSerializer.Meta):
         fields = UserSerializer.Meta.fields + ('products',)
+
+
+class ProductOrderSerializer(serializers.ModelSerializer):
+    id = serializers.IntegerField(source='product.id')
+    name = serializers.ReadOnlyField(source='product.name')
+    price = serializers.ReadOnlyField(source='product.price')
+    quantity = serializers.IntegerField()
+
+    class Meta:
+        model = Product
+        fields = ('id', 'name', 'price', 'quantity')
+
+
+class OrderSerializer(serializers.ModelSerializer):
+    products = ProductOrderSerializer(many=True, source='orderproduct_set')
+    user = serializers.ReadOnlyField(source='user.username')
+
+    class Meta:
+        model = Order
+        fields = ('id', 'user', 'comment', 'created_at', 'products')
+
+    @transaction.atomic
+    def create(self, validated_data):
+        products_data = validated_data.pop('orderproduct_set')
+
+        order = Order.objects.create(**validated_data)
+        for product_data in products_data:
+            product_id = product_data['product']['id']
+            quantity = product_data['quantity']
+            try:
+                product = Product.objects.get(id=product_id)
+            except Product.DoesNotExist:
+                raise serializers.ValidationError(
+                    f'Product with id {product_id} does not exist'
+                )
+            if not product.open_for_sale:
+                raise serializers.ValidationError(
+                    f'Product with id {product_id} is not open for sale'
+                )
+            OrderProduct.objects.create(
+                order=order,
+                product=product,
+                quantity=quantity
+            )
+        return order

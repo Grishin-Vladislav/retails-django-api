@@ -46,3 +46,21 @@ class Product(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class Order(models.Model):
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE,
+                             related_name='orders')
+    products = models.ManyToManyField(Product, through='OrderProduct',
+                                      related_name='in_orders')
+    comment = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+
+class OrderProduct(models.Model):
+    product = models.ForeignKey('Product', on_delete=models.CASCADE)
+    order = models.ForeignKey('Order', on_delete=models.CASCADE)
+    quantity = models.PositiveIntegerField(default=1)
+
+    class Meta:
+        unique_together = ['order', 'product']

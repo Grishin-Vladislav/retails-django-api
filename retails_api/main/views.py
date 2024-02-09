@@ -2,8 +2,8 @@ from rest_framework import generics, permissions
 
 from .permissions import IsOwnerOrReadOnly, IsProviderOrReadOnly
 from .serializers import ProductSerializer, UserSerializer, \
-    UserDetailSerializer
-from .models import Product, CustomUser
+    UserDetailSerializer, OrderSerializer
+from .models import Product, CustomUser, Order
 
 
 class ProductView(generics.ListCreateAPIView):
@@ -48,3 +48,17 @@ class UserDetail(generics.RetrieveAPIView):
     """
     queryset = CustomUser.objects.all()
     serializer_class = UserDetailSerializer
+
+
+class OrderList(generics.ListCreateAPIView):
+    queryset = Order.objects.all()
+    serializer_class = OrderSerializer
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+    def get_queryset(self):
+        if self.request.user.is_provider:
+            return Order.objects.filter(products__provider=self.request.user)
+        return Order.objects.filter(user=self.request.user)
