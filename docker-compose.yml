@@ -4,8 +4,8 @@ services:
   db:
     image: postgres:16-alpine
     container_name: postgres_db
-    ports:
-      - ${DB_PORT}:5432
+    networks:
+      - my_network
     volumes:
       - db:/var/lib/postgresql/data
     restart: unless-stopped
@@ -15,6 +15,28 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: ${DB_NAME}
 
+  app:
+    container_name: django_app
+    networks:
+      - my_network
+    ports:
+      - '8000:8000'
+    build: .
+    command: python retails_api/manage.py runserver 0.0.0.0:8000
+    volumes:
+      - django:/app
+    depends_on:
+      - db
+    env_file:
+      - .env
+    restart: unless-stopped
+
 volumes:
   db:
     driver: local
+  django:
+    driver: local
+
+networks:
+  my_network:
+    driver: bridge
