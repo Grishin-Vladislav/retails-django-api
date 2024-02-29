@@ -1,4 +1,5 @@
 from rest_framework import generics, permissions
+from rest_framework.authtoken.views import ObtainAuthToken
 
 from .permissions import IsOwnerOrReadOnly, IsProviderOrReadOnly
 from .serializers import ProductSerializer, UserSerializer, \
@@ -62,3 +63,11 @@ class OrderList(generics.ListCreateAPIView):
         if self.request.user.is_provider:
             return Order.objects.filter(products__provider=self.request.user)
         return Order.objects.filter(user=self.request.user)
+
+
+class LoginView(ObtainAuthToken):
+    """
+    Use this to obtain a token, pass this token to other requests with header:
+    Authorization: Bearer 123456789abcdef
+    """
+    pass
