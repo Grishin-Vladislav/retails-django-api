@@ -4,6 +4,7 @@ services:
   db:
     image: postgres:16-alpine
     container_name: postgres_db
+    user: postgres
     networks:
       - my_network
     volumes:
@@ -14,6 +15,11 @@ services:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: ${DB_NAME}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready"]
+      interval: 5s
+      timeout: 5s
+      retries: 3
 
   app:
     container_name: django_app
@@ -25,7 +31,8 @@ services:
     volumes:
       - django:/app
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     env_file:
       - .env
     restart: unless-stopped
