@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'main',
 
     'rest_framework',
+    'rest_framework.authtoken',
     'drf_spectacular',
 ]
 
@@ -130,6 +131,9 @@ AUTH_USER_MODEL = 'main.CustomUser'
 
 REST_FRAMEWORK = {
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'main.authentication.BearerTokenAuthentication',
+    ]
 }
 
 SPECTACULAR_SETTINGS = {
