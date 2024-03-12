@@ -1,5 +1,15 @@
+from datetime import datetime, timedelta
+
+import jwt
+from django.urls import reverse
+
 from rest_framework import generics, permissions
 from rest_framework.authtoken.views import ObtainAuthToken
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from rest_framework.status import HTTP_404_NOT_FOUND, HTTP_200_OK, \
+    HTTP_400_BAD_REQUEST, HTTP_201_CREATED
+from django.core.mail import send_mail
 
 from .permissions import IsOwnerOrReadOnly, IsProviderOrReadOnly
 from .serializers import ProductSerializer, UserSerializer, \
@@ -71,3 +81,95 @@ class LoginView(ObtainAuthToken):
     Authorization: Bearer 123456789abcdef
     """
     pass
+
+
+class ResetPasswordView(APIView):
+    """
+    POST api/v1/reset-password
+    PATCH api/v1/reset-password
+
+    post for requesting password reset
+    patch for changing password
+    """
+    authentication_classes = []
+
+    def post(self, request):
+        user_mail = request.data.get('email')
+        if not user_mail:
+            msg = "Email not provided"
+            return Response({"error": msg}, status=HTTP_400_BAD_REQUEST)
+        try:
+            user_object = CustomUser.objects.get(email=user_mail)
+        except CustomUser.DoesNotExist:
+            msg = "User with this email does not exist"
+            return Response({"error": msg}, status=HTTP_404_NOT_FOUND)
+
+        expiration_time = datetime.now() + timedelta(hours=1)
+
+        # TODO: change secret to env var
+        token = jwt.encode(
+            {
+                'email': user_object.email,
+                'password_hash': user_object.password,
+                'exp': expiration_time
+            },
+            'secret',
+            algorithm='HS256'
+        )
+
+        send_mail(
+            "Your password reset token",
+
+            f"Here is your password reset token: \n{token}\n"
+            f"Endpoint is {reverse('reset-password')}\n"
+            f"Use this token with patch request as authorization header "
+            f"with keyword Bearer to reset your password\n"
+            f"params needed: new_password\n"
+            f"This token is valid for 1 hour and is one time use only",
+
+            "from@example.com",
+            [user_mail],
+            fail_silently=False,
+        )
+        return Response({'message': 'Email sent'}, status=HTTP_200_OK)
+
+    def patch(self, request):
+        authorization_header = request.META.get('HTTP_AUTHORIZATION')
+        if not authorization_header:
+            return Response({'message': 'no authorization provided'},
+                            status=HTTP_400_BAD_REQUEST)
+
+        try:
+            prefix, token = authorization_header.split(' ')
+        except ValueError:
+            return Response({'message': 'Invalid authorization header'},
+                            status=HTTP_400_BAD_REQUEST)
+
+        if prefix != 'Bearer':
+            return Response({'message': 'no Bearer keyword'},
+                            status=HTTP_400_BAD_REQUEST)
+
+        new_password = request.data.get('new_password')
+        if not new_password:
+            return Response({'message': 'new_password not provided'},
+                            status=HTTP_400_BAD_REQUEST)
+
+        try:
+            jwt_token = jwt.decode(token, 'secret', algorithms=['HS256'])
+            user = jwt_token.get('email')
+            password_hash = jwt_token.get('password_hash')
+
+            user_object = CustomUser.objects.get(email=user)
+            old_password = user_object.password
+            if old_password != password_hash:
+                raise ValueError('This token was used before')
+
+            user_object.set_password(new_password)
+            user_object.save()
+
+        except jwt.PyJWTError as e:
+            return Response({'message': f'{e}'}, status=HTTP_400_BAD_REQUEST)
+        except ValueError as e:
+            return Response({'message': f'{e}'}, status=HTTP_400_BAD_REQUEST)
+
+        return Response({'message': 'Password changed'}, status=HTTP_201_CREATED)
