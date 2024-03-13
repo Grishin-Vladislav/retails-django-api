@@ -86,6 +86,24 @@ class OrderList(generics.ListCreateAPIView):
         return Order.objects.filter(user=self.request.user)
 
 
+class OrderFulfilmentNotification(APIView):
+    permission_classes = (IsOwnerOrReadOnly, IsProviderOrReadOnly)
+
+    def post(self, request, *args, **kwargs):
+        customer = Order.objects.get(id=kwargs['pk']).user
+        send_mail(
+            'Provider began to fulfill your order!',
+
+            f'Your order has begun to be fulfilled.\n'
+            f'provider will contact you shortly.',
+
+            'P5sI8@example.com',
+
+            [customer.email]
+        )
+        return Response({"message": "email sent"}, status=HTTP_200_OK)
+
+
 class LoginView(ObtainAuthToken):
     """
     Use this to obtain a token, pass this token to other requests with header:
