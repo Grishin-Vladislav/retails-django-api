@@ -33,8 +33,11 @@ class Product(models.Model):
     name = models.CharField(max_length=255)
     price = models.FloatField()
     open_for_sale = models.BooleanField(default=True)
-    provider = models.ForeignKey(CustomUser,
-                                 related_name='products',
+    category = models.ForeignKey('Category', on_delete=models.CASCADE)
+    characteristics = models.ManyToManyField('Characteristic',
+                                             related_name='products',
+                                             through='ProductCharacteristic')
+    provider = models.ForeignKey(CustomUser, related_name='products',
                                  on_delete=models.CASCADE)
 
     objects = models.Manager()
@@ -46,6 +49,32 @@ class Product(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class Category(models.Model):
+    name = models.CharField(max_length=255, unique=True)
+    characteristics = models.ManyToManyField('Characteristic',
+                                             related_name='categories')
+
+    def __str__(self):
+        return self.name
+
+
+class Characteristic(models.Model):
+    name = models.CharField(max_length=255, unique=True)
+
+    def __str__(self):
+        return self.name
+
+
+class ProductCharacteristic(models.Model):
+    product = models.ForeignKey('Product', on_delete=models.CASCADE)
+    characteristic = models.ForeignKey('Characteristic',
+                                       on_delete=models.CASCADE)
+    value = models.CharField(max_length=255)
+
+    def __str__(self):
+        return self.value
 
 
 class Order(models.Model):

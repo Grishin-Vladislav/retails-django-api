@@ -2,7 +2,8 @@ from django.db import transaction
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 
-from .models import Product, CustomUser, Order, OrderProduct
+from .models import Product, CustomUser, Order, OrderProduct, Category, \
+    Characteristic
 
 USER_MODEL = get_user_model()
 
@@ -30,6 +31,7 @@ class ListProductsSerializer(serializers.ListSerializer):
 
 class ProductSerializer(serializers.ModelSerializer):
     provider = serializers.ReadOnlyField(source='provider.username')
+    category = serializers.ReadOnlyField(source='category.name')
 
     def validate_name(self, value):
         try:
@@ -46,8 +48,34 @@ class ProductSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Product
-        fields = ('name', 'price', 'open_for_sale', 'provider')
+        fields = ('name', 'price', 'open_for_sale', 'provider', 'category')
         list_serializer_class = ListProductsSerializer
+
+
+class CharacteristicSerializer(serializers.ModelSerializer):
+    name = serializers.CharField(min_length=3, max_length=255)
+
+    class Meta:
+        model = Characteristic
+        fields = ('name',)
+
+
+class CategorySerializer(serializers.ModelSerializer):
+    characteristics = CharacteristicSerializer(many=True)
+
+    @transaction.atomic
+    def create(self, validated_data):
+        characteristics_data = validated_data.pop('characteristics')
+        category = Category.objects.create(**validated_data)
+        for characteristic_data in characteristics_data:
+            characteristic_object \
+                = Characteristic.objects.get_or_create(**characteristic_data)[0]
+            category.characteristics.add(characteristic_object)
+        return category
+
+    class Meta:
+        model = Category
+        fields = ('id', 'name', 'characteristics')
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -79,9 +107,6 @@ class UserDetailSerializer(UserSerializer):
 
 
 class ProductOrderSerializer(serializers.ModelSerializer):
-    id = serializers.IntegerField(source='product.id')
-    name = serializers.ReadOnlyField(source='product.name')
-    price = serializers.ReadOnlyField(source='product.price')
     quantity = serializers.IntegerField()
 
     class Meta:
@@ -90,7 +115,8 @@ class ProductOrderSerializer(serializers.ModelSerializer):
 
 
 class OrderSerializer(serializers.ModelSerializer):
-    products = ProductOrderSerializer(many=True, source='orderproduct_set')
+    products = ProductOrderSerializer(many=True,
+                                      source='orderproduct_set')
     user = serializers.ReadOnlyField(source='user.username')
 
     class Meta:

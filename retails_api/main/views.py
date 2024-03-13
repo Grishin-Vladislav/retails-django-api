@@ -11,10 +11,11 @@ from rest_framework.status import HTTP_404_NOT_FOUND, HTTP_200_OK, \
     HTTP_400_BAD_REQUEST, HTTP_201_CREATED
 from django.core.mail import send_mail
 
-from .permissions import IsOwnerOrReadOnly, IsProviderOrReadOnly
+from .permissions import IsOwnerOrReadOnly, IsProviderOrReadOnly, \
+    IsAdminOrReadOnly
 from .serializers import ProductSerializer, UserSerializer, \
-    UserDetailSerializer, OrderSerializer
-from .models import Product, CustomUser, Order
+    UserDetailSerializer, OrderSerializer, CategorySerializer
+from .models import Product, CustomUser, Order, Category
 
 
 class ProductView(generics.ListCreateAPIView):
@@ -40,8 +41,18 @@ class ProductView(generics.ListCreateAPIView):
 
     def get_queryset(self):
         if self.request.user.is_anonymous or not self.request.user.is_provider:
-            return Product.available.all()
-        return Product.objects.all()
+            return Product.available.prefetch_related('category__name')
+        return Product.objects.prefetch_related('category__name')
+
+
+class CategoryView(generics.ListCreateAPIView):
+    """
+    View all categories with appropriate characteristics.
+    Only Staff can create new categories and their characteristics.
+    """
+    serializer_class = CategorySerializer
+    permission_classes = (IsAdminOrReadOnly,)
+    queryset = Category.objects.all().prefetch_related('characteristics')
 
 
 class UserList(generics.ListCreateAPIView):
@@ -82,7 +93,7 @@ class LoginView(ObtainAuthToken):
     """
     pass
 
-
+# TODO: change secret to env var
 class ResetPasswordView(APIView):
     """
     POST api/v1/reset-password
@@ -106,7 +117,6 @@ class ResetPasswordView(APIView):
 
         expiration_time = datetime.now() + timedelta(hours=1)
 
-        # TODO: change secret to env var
         token = jwt.encode(
             {
                 'email': user_object.email,
